@@ -1,0 +1,4 @@
+This three files needs to be on your sd card or usb.
+USB pen drives and SD card should be formatted in FAT 32
+There is one more file that is "kernel.img" needs to be added with these.
+You can make your own kernel.img.

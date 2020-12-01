@@ -14,3 +14,6 @@ Without these files the sd card would not be recognised in the raspberry pi.
 **Basic Assembly Code :**
 This directory contains different sub-directories which contains codes to operate different peripheral on raspberry pi 3 b+.<br />
 Each folder contains a readme file which contains almost all the details regarding it's respective content.
+
+***Information :***
+This directory contains different information regarding raspberry pi.

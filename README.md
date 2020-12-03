@@ -5,6 +5,11 @@ This repo contains the code that operates on the raspberry pi 3 b+.
 I have found the bare metal codes on internet. Using those I am 
 trying to understand ARM.
 
+**To Do List**
+- [ ] Record video of setup
+- [ ] mmap linux
+
+
 #### Folder Details
 
 **sd_card_content :**\

@@ -19,5 +19,7 @@ int main()
 unsigned int address = 0;
 
 printf("Address : %x",bcm_host_get_peripheral_address());
+printf("Address : %x",bcm_host_get_peripheral_size());
+printf("Address : %x",bcm_host_get_sdram_address());
 return 0;
 }

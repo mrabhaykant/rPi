@@ -8,7 +8,7 @@ trying to understand ARM.
 **To Do List**
 - [ ] Record video of setup
 - [ ] mmap linux
-
+- [ ] GPU postman working
 
 #### Folder Details
 

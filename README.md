@@ -10,6 +10,27 @@ trying to understand ARM.
 - [ ] mmap linux
 - [ ] GPU postman working
 
+### Board Specifications
+
+- GPU :         
+  - Videocore IV
+- Processor:      
+  - Broadcom BCM28730B0
+  - Cortex-A53 (ARMv8) 64-bit SoC @ 1.4 Ghz
+- RAM	 : 
+  - 1 GB LPDDR2 SDRAM
+- Communication:  
+  - 2.4GHz and 5GHz IEEE 802.11/b/n/ac wireless LAN
+  - Bluetooth 4.2
+  - BLE
+  - Ethernet Gigabit over USB 2.0 (Max. throughtput 300 Mbps)
+  - USB 2.0 ( 4 PORT )
+- GPIO	 :        40 PIN 
+- Video	 :
+  - HDMI (Full-Size)
+  - DSI display port for connecting a rPi touchscreen display
+  - 4-pole setreo output and composite video port
+
 #### Folder Details
 
 **sd_card_content :**\

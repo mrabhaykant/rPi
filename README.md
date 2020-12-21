@@ -12,6 +12,15 @@ trying to understand ARM.
 - [ ] mmap linux
 - [ ] GPU postman working
 
+### Boot Up Sequence of rPi 3 b+
+1. GPU is initialized
+2. GPU transfers the control to ARM
+3. GPU checks for the inital ARM code in SD Card slot
+    a. If the SD Card is not present it checks for any USB Storage media 
+        It then loads the kernel.img into memory.
+        
+NOTE: After the kernel is loaded into the memory you can remove the USB media or SD card.
+      And the rPi will execute the code from its memory.
 ### Board Specifications
 
 - GPU :         

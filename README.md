@@ -7,6 +7,8 @@ trying to understand ARM.
 
 **To Do List**
 - [ ] Record video of setup
+- [ ] compile c without standard libraries
+- [ ] led on every gpio as output  
 - [ ] mmap linux
 - [ ] GPU postman working
 

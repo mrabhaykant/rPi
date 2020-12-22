@@ -23,3 +23,10 @@ To setup toolchain on your system follow the steps:
       echo $PATH
       ```
       
+### Format SD card
+You will need to format your sd card to FAT-32. 
+There is a SdCardFormatterv5_winEN.zip . Extract the zip and install in windows. 
+This program works fine on windows 10.\
+**NOTE:** ***This will give no warning and will delete everything and format to the selected. \
+            IF USED INCORRECTLY IT CAN WIPE OUT YOUR HARD DRIVE.*** 
+       

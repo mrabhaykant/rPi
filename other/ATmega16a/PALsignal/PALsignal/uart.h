@@ -18,7 +18,8 @@ void USART_Init()
 {
 	/* Set baud rate */
 	//UBRRH = (unsigned char)(baud>>8);
-	UBRRL = 0x67;
+	//UBRRL = 0x67;
+	UBRRL = 0x08;	//115200
 	/* Enable receiver and transmitter */
 	UCSRB = (1<<RXEN)|(1<<TXEN)| (1<< RXCIE);
 	/* Set frame format: 8data, 2stop bit */
@@ -35,5 +36,15 @@ char usart_receive()
 	while (!(UCSRA & (1<<RXC)));
 	return UDR;
 }
-
+void USART_SendString (char *st)
+{
+	unsigned char i=0;
+	while(st[i]!=0)
+	{
+		//while(! (UCSRA & (1<<UDRE)));
+		usart_send(st[i]);
+		i++;
+		//_delay_ms(25);
+	}
+}
 #endif /* UART_H_ */

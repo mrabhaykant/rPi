@@ -8,19 +8,22 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
+#include <stdlib.h>
 #include "uart.h"
+#include "ADC.h"
 #include "dispChars.h"
+
 #define NOP asm("nop");
 #define ZERO PORTD=0
 #define BLACK PORTD=(1<<7) //v out = .3v (black color)
 #define WHITE PORTB=(1<<5) //v out = .8v (just white color)
 #define color PORTD=(1<<7)|(1<<5)
-int8_t SW1;
-char SWxs;
-char SWxM;
-char SWxxM;
-char SWxH;
-char SWxxH;
+int8_t SW1;		//Seconds
+char SWxs;		//10 seconds
+char SWxM;		//min
+char SWxxM;		//10 min
+char SWxH;		//hour
+char SWxxH;		//10 hour
 void myName(int num,char chrAlp);
 void myName4(int num,char chrAlp);
 void myName5(int num,char chrAlp);
@@ -28,7 +31,7 @@ void tvchar(int alpha);
 void myDelay(int num);
 static int16_t i;
 static int8_t j,k,o1=0;
-static uint8_t m;
+static uint16_t m;
 
 // struct d_chr{
 // 	int8_t d_chr_pos[20];
@@ -46,6 +49,7 @@ rx = UDR;
 }
 
 ISR(TIMER2_COMP_vect){
+
 	if(i<3){
 		BLACK;myDelay(0xF9);	//0xf8 = 4us
 		ZERO;myDelay(0xc8);	//0xf9 = 28us
@@ -59,49 +63,48 @@ ISR(TIMER2_COMP_vect){
 		ZERO;myDelay(0xf9);
 		BLACK;myDelay(0xc8);
 	}
-//	tvchar(SW1);
-	tvchar(5);
-	if (SWxs > 5)
-	{
-		SWxs=0;SWxM++;
+	/*
+		SW1 Seconds
+			SWxs	10 seconds
+				SWxM	Min
+					SWxxM	10 Min
+						SwxH	Hour
+							SWxxH	10 Hour
+	*/
+		if(SW1>9){SW1=0;SWxs++;}	// Clock Second Digit Update if the second digit is > 9 then put zero.
+	if (SWxs > 5) {
+		SWxs=0;SWxM++;	//whenever 10sec greater than 5 means 60 it goes to zero.
 	}
-	if (SWxM>9)
-	{
+	if (SWxM>9)	{
 		SWxM=0;SWxxM++;
 	}
-	if (SWxxM >5)
-	{
+	if (SWxxM >5) {
 		SWxxM =0;SWxH++;
 	}
-	if(SWxH >9)
-	{
+	if(SWxH >9)	{
 		SWxH = 0;SWxxH++;
 	}
-	if (SWxxH ==2)
-	{
-		if (SWxH >3)
-		{
+	if (SWxxH ==2)	{
+		if (SWxH >3) {
 			SWxxH = 0;SWxH = 0;
 		}
-		
 	}
+	/*
+	*	This is a two hour timer.
+	*/
+if (SWxH > 1)
+{
+	tvchar(1);
+}
+else
+{
+	tvchar(5);
+}
 
-	//tvchar(5);
-//	tvchar(0);
-// 		if (m < 127)
-// 		{
-// 			tvchar(SW1);
-// 		}
-// 		if (m >= 127)
-// 		{
-// 			tvchar(1);
-// 		}
 			if(i>=309 && i <312)
 			{
 				//BLACK;_delay_us(4);
-				
 				ZERO;myDelay(0xf8);
-				
 				BLACK;/*_delay_us(28);*/myDelay(0xF9);
 				ZERO;myDelay(0xf8);
 				BLACK;myDelay(0xF9);
@@ -109,14 +112,17 @@ ISR(TIMER2_COMP_vect){
 	if(i==313){
 		i=0;
 			ZERO;myDelay(0xf8);
-			
 			BLACK;/*_delay_us(28);*/myDelay(0xF9);
 			ZERO;myDelay(0xf8);
 			BLACK;myDelay(0xF9);
 	}
 	i++;
-
-		m++;
+	if (m == 15625)
+	{
+		SW1++;
+		m=0;
+	}
+	m++;
 }
 
 void myDelay(int num){
@@ -130,20 +136,11 @@ void myDelay(int num){
 
 ISR(TIMER1_OVF_vect)
 {
-	SW1++;
-	if(SW1>9){SW1=0;SWxs++;}
-// 		if (SWxs > 5)
-// 		{
-// 			SWxs=0;SWxM++;
-// 		}
-// 		if (SWxM>9)
-// 		{
-// 			SWxM=0;SWxxM++;
-// 		}
-// 		if (SWxxM >5)
-// 		{
-// 			SWxxM =0;
-// 		}
+	//SW1++;
+	//if(SW1>9){SW1=0;SWxs++;}	// Clock Second Digit Update if the second digit is > 9 then put zero.
+	
+	
+	
 	TCNT1 = 0xc2f7;	//1s
 	//TCNT1 = 0xe17b;	//0.5s
 	//TCNT1 = 0xf0be;	//0.25
@@ -152,12 +149,26 @@ ISR(TIMER1_OVF_vect)
 	sei();
 	
 }
+
 int main(void)
 {
 	USART_Init();
+		DDRA &= ~(1 << 0);
 		DDRB |= (1<<5)|(1<<7)|(1<<4);	//SPI Init
 		SPCR = (1<<SPE)|(1<<MSTR)|(1<<CPHA);
+		//SPSR |= (1 << SPI2X);	// Double speed of spi
 	DDRD |= (1<<7)|(1<<5)|(1 <<4);
+	ADC_Init();
+	USART_SendString("ATE0\r\n");
+	_delay_us(2000);
+	USART_SendString("AT+CIPMUX=0\r\n");
+	_delay_us(2000);
+	USART_SendString("AT+CIPSTART=\"UDP\",\"192.168.43.72\",6789\r\n");
+	_delay_us(2000);
+	USART_SendString("AT+CIPSEND=5\r\n");
+	_delay_us(1000);
+	USART_SendString("ABHAY\r\n");
+	
 	//TIMSK=(0<<TOIE0)|(1<<TOIE1)|(1 << OCIE0);
 	//TCCR0 = (1<<WGM01)|(0 << COM00)|(1 << CS02)|(0 << CS01)|(0 << CS00);		// Timer 0 control register	prescaler = 256
 	//TCNT0 = 0;
@@ -174,568 +185,11 @@ int main(void)
 // 	 int j;
     /* Replace with your application code */
   while(1){
-	  
+
 	}
 }
 
-void tvchar(int alpha){
-	if(alpha == 0){
-		
-		if(i>=6 && i <=308)
-		{
-			ZERO;myDelay(0xF9);BLACK;_delay_us(8);
-			BLACK;
-			_delay_us(5);
-			//WHITE;
-			BLACK;
-			//_delay_us(1);
-			if (i<50)
-			{
-			}
-			if (i>=50 && i<150 )
-			{
-				_delay_us(4);
-				for (j=0;j<25;j++)
-				{
-					for (k=j;k<2;k++)
-					{
-						if (i>50 && i<150)
-						{
-							WHITE;BLACK;WHITE;BLACK;WHITE;BLACK;WHITE;BLACK;WHITE;
-						}
-						
-						// 								if (i>90 && i<100)
-						// 								{
-						// 									BLACK;WHITE;
-						// 								}
-						
-						//_delay_us(1);
-					}
-					
-				}
-			}
-			else if (i>=150 && i<=289)
-			{_delay_us(5);
-				for (j=0;j<2;j++)
-				{
-					
-					WHITE;
-					//_delay_us(1);
-					
-					
-				}
-			}
-			else if (i>=290 && i<=300)
-			{
-				for (j=0;j<25;j++)
-				{
-					for (k=j;k<2;k++)
-					{
-						WHITE;
-						_delay_us(1);
-					}
-					
-				}
-			}
-			
-			BLACK;_delay_us(2);
-		}
-
-	}
-	if(alpha == 1){
-		if(i>=6 && i <=308)
-		{
-			ZERO;myDelay(0xF9);BLACK;_delay_us(8);
-			BLACK;
-			_delay_us(5);
-			//WHITE;
-			BLACK;
-			//_delay_us(1);
-			if (i<50)
-			{
-			}
-			if (i>=50 && i<150 )
-			{
-				_delay_us(4);
-				for (j=0;j<25;j++)
-				{
-					for (k=j;k<2;k++)
-					{
-						if (i>50 && i<150)
-						{
-							WHITE;BLACK;WHITE;BLACK;WHITE;
-						}
-						// 								if (i>90 && i<100)
-						// 								{
-						// 									BLACK;WHITE;
-						// 								}
-						
-						//_delay_us(1);
-					}
-					
-				}
-			}
-			else if (i>=150 && i<=289)
-			{_delay_us(5);
-				for (j=0;j<2;j++)
-				{
-					
-					WHITE;
-					//_delay_us(1);
-					
-					
-				}
-			}
-			else if (i>=290 && i<=300)
-			{
-				for (j=0;j<25;j++)
-				{
-					for (k=j;k<2;k++)
-					{
-						WHITE;
-						_delay_us(1);
-					}
-					
-				}
-			}
-			
-			BLACK;_delay_us(2);
-		}
-	}
-	if(alpha == 3){
-		
-		if(i>=6 && i <=308)
-		{
-			ZERO;myDelay(0xF9);BLACK;_delay_us(8);
-			BLACK;
-			_delay_us(5);
-			WHITE;
-			_delay_us(1);
-			if (i<190)
-			{
-				for (j=0;j<20;j++)
-				{
-					for (k=j;k<2;k++)
-					{
-						BLACK;WHITE;
-						_delay_us(1);
-					}
-					
-				}
-			}
-			else if (i>200)
-			{
-				for (j=0;j<30;j++)
-				{
-					for (k=j;k<2;k++)
-					{
-						_delay_us(1);
-					}
-					
-				}
-			}
-			
-			BLACK;_delay_us(2);
-		}
-		
-
-	}
-	
-	if(alpha == 4){
-		if(i>=6 && i <=308)
-		{//8
-			ZERO;myDelay(0xF9);
-			BLACK;
-			BLACK;
-			BLACK;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-			BLACK;
-			WHITE;
-
-
-			
-			
-			BLACK;_delay_us(6);
-			//BLACK;
-			//_delay_us(5);
-			//WHITE;
-			//BLACK;
-			//_delay_us(1);
-			if (i<10)
-			{
-				WHITE;_delay_us(10);BLACK;WHITE;_delay_us(10);BLACK;WHITE;_delay_us(10);BLACK;WHITE;_delay_us(1);BLACK;
-			}
-			if (i>=40&&i<=59)
-			{
-				myName(40,'a');
-				myName(40,'b');
-				myName(40,'h');
-				myName(40,'a');
-				myName(40,'y');
-				//	myName(60,'h');
-				//	myName(60,'a');
-				//for(int o1=0;o1<4;o1++)PORTD = (1<<5)&(arr1[i-60]<<o1);
-				
-				//for(int o1=0;o1<3;o1++)PORTD = (1<<5)&(arry[i-60]>>o1);
-				
-				// 				for(int o1=0;o1<3;o1++)PORTD = (1<<5)&(arry[i-60]>>o1);
-				// 				BLACK;
-				
-			}
-			if (i>=70&&i<=89)
-			{
-				myName(70,'a');
-				myName(70,'a');
-				myName(70,'h');
-				myName(70,'a');
-				myName(70,'y');
-			}
-			if (i>=95&&i<=114/*114*/)
-			{
-				myName4(95,'1');
-				// 					for(int o1=0;o1<3;o1++){PORTD =/* 0xa0&*/(arrZ[i-95]>>o1);}
-				// 					BLACK;
-				myName4(95,'2');
-				myName4(95,'3');
-				myName4(95,'4');
-				
- 				
-// 				myName(95,'y');
-			}
-			if (i>=125&&i<=144)
-			{
-				myName4(125,'5');
-				myName4(125,'6');
-				myName4(125,'7');
-				myName4(125,'8');
-				
-				//myName(125,'h');
-				//myName(125,'a');
-				//myName(120,'y');
-				//for(int o1=0;o1<5;o1++)PORTD = (1<<5)&(arrB[i-90]<<o1);
-				//for(int o1=0;o1<5;o1++)PORTD = (1<<5)&(arr1[i-90]<<o1);
-				//for(int o1=0;o1<7;o1++)
-				// 				PORTD = (1<<7)|(arr1[101-i]<<o1);
-				
-			}
-			if (i>=150&&i<=169)
-			{
-				myName4(150,'9');
- 				myName4(150,'0');
-// 				myName(150,'h');
-// 				myName(150,'a');
-// 				myName(150,'y');
-			}
-			if (i>=180&&i<=199)
-			{
-				myName(180,'a');
-				myName(180,'b');
-				myName(180,'h');
-				myName(180,'a');
-				myName(180,'y');
-			}
-			if (i>=210&&i<=229)
-			{
-				myName(210,'a');
-				myName(210,'b');
-				myName(210,'h');
-				myName(210,'a');
-				myName(210,'y');
-			}
-			if (i>=240&&i<=259)
-			{
-				myName(240,'a');
-				myName(240,'b');
-				myName(240,'h');
-				myName(240,'a');
-				myName(240,'y');
-			}
-// 			if (i>=270&&i<=289)
-// 			{
-// 				myName(270,'a');
-// 				myName(270,'b');
-// 				myName(270,'h');
-// 				myName(270,'a');
-// 				myName(270,'y');
-// 			}
-			// 				if (i>=290&&i<=309)
-			// 				{
-			// 					myName(270,'a');
-			// 					myName(270,'b');
-			// 					myName(270,'h');
-			// 					myName(270,'a');
-			// 					myName(270,'y');
-			// 				}
-			// 			else if (i>=280 && i<=300)
-			// 			{
-			// 				//myName(20);
-			// 				for (j=0;j<25;j++)
-			// 				{
-			// 					for (k=j;k<2;k++)
-			// 					{
-			// 						WHITE;
-			// 						_delay_us(1);
-			// 					}
-			//
-			// 				}
-			// 			}
-			
-			BLACK;_delay_us(2);
-		}
-	}
-		if(alpha == 5){
-			if(i>=6 && i <=308)
-			{//8
-				ZERO;
-
-							//NOP					
-				myDelay(0xfa);
-				//myDelay(0xFa);
-					BLACK;
-					BLACK;BLACK;BLACK;
- 									
-BLACK;
-
-
-
-for (o1 = 0;o1 <6;o1++){
-	//PORTD ^= (1<<5);
-	PORTD ^= (0<<5);
-	
-	
-	//PORTD &=~(1<<5);
-	//BLACK;
-	
-	}
-BLACK;
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <6;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <6;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <6;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <6;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <6;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <6;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <6;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <6;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <6;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <6;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <6;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <2;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <2;o1++){}
-// PORTD =0x20;PORTD = 0x10;PORTD =0X80;for (o1 = 0;o1 <2;o1++){}
-// PORTD =0x20;PORTD = 0x10;for (o1 = 0;o1 <2;o1++){}
-// PORTD =0x20;PORTD = 0x10;PORTD =0X80;for (o1 = 0;o1 <2;o1++){}
-
-
-					////////////////////////////////////////////////////
-					/*
-					PORTD =0x10;
-					PORTD =0x90;//NOP
-					PORTD =0x00;
-										PORTD =0x90;
-					PORTD =0x10;
-				//	PORTD =0x90;
-					PORTD =0x00;
-					PORTD =0x10;
-					PORTD =0x90;
-				//	PORTD =0x90;
-					PORTD =0x00;
-					PORTD =0x00;
-					*/
-					/////////////////////////////////////////////////
-
-				//BLACK;
-//_delay_us(1);
-				
-			//myDelay(0xFf);
-//			myDelay(0xff);
-								//	WHITE;
-				//_delay_us(5);
-				//WHITE;
-				//BLACK;
-				//_delay_us(1);
-				if (i<10)
-				{
-				//	WHITE;_delay_us(10);BLACK;WHITE;_delay_us(10);BLACK;WHITE;_delay_us(10);BLACK;WHITE;_delay_us(1);BLACK;
-				}
-				if (i>=40&&i<=59)
-				{
-					myName4(40,SWxxH+0x30);
-					myName4(40,SWxH+0x30);
-					myName4(40,'d');
-					myName4(40,SWxxM+0x30);
-					myName4(40,SWxM+0x30);
-					myName4(40,'d');
-// 					BLACK;
-// 					WHITE;
-// 					WHITE;
-// 					BLACK;
-										//myName4(40,'d');
-// 					if(i>=45 &&i<=46){WHITE;BLACK;}
-// 					if(i>=50 &&i<=51){WHITE;BLACK;}
-					myName4(40,SWxs+0x30);
-					myName4(40,SW1+0x30);
-// 					myName(40,'b');
-// 					myName(40,'h');
-// 					myName(40,'a');
-//  					myName(40,'y');
-					//	myName(60,'h');
-					//	myName(60,'a');
-					//for(int o1=0;o1<4;o1++)PORTD = (1<<5)&(arr1[i-60]<<o1);
-					
-					//for(int o1=0;o1<3;o1++)PORTD = (1<<5)&(arry[i-60]>>o1);
-					
-					// 				for(int o1=0;o1<3;o1++)PORTD = (1<<5)&(arry[i-60]>>o1);
-					// 				BLACK;
-					
-				}
-				if (i>=70&&i<=89)
-				{
-					//myName(70,'a');myName(70,'b');myName(70,'h');myName(70,'a');myName(70,'y');
-					myName4(70,'1');myName4(70,'2');myName4(70,'3');myName4(70,'4');myName4(70,'5');myName4(70,'6');myName4(70,'7');myName4(70,'8');myName4(70,'9');myName4(70,'0');
-				}
-				if (i>=95&&i<=114)
-				{
-					myName4(95,'1');myName4(95,'2');myName4(95,'3');myName4(95,'4');myName4(95,'5');myName4(95,'6');myName4(95,'7');myName4(95,'8');myName4(95,'9');myName4(95,'0');
-	// 				myName(95,'y');
-				}
-				if (i>=125&&i<=144)
-				{
-					myName4(125,'1');myName4(125,'2');myName4(125,'3');myName4(125,'4');myName4(125,'5');myName4(125,'6');myName4(125,'7');myName4(125,'8');myName4(125,'9');myName4(125,'0');
-					//myName4(125,SW1+0x30);myName4(125,SW1+0x30);myName4(125,SW1+0x30);myName4(125,SW1+0x30);myName4(125,SW1+0x30);myName4(125,SW1+0x30);myName4(125,SW1+0x30);myName4(125,SW1+0x30);
-					//myName4(125,SW1+0x30);myName4(125,SW1+0x30);//myName4(125,SW1+0x30);myName4(125,SW1+0x30);
-				}
- 				if (i>=150&&i<=169)
- 				{
-  					myName4(150,'1');myName4(150,'2');myName4(150,'3');myName4(150,'4');myName4(150,'5');myName4(150,'6');myName4(150,'7');myName4(150,'8');myName4(150,'9');myName4(150,'0');
- // 					// 				myName(150,'h');
- // 					// 				myName(150,'a');
- // 					// 				myName(150,'y');
- 				}
-				if (i>=180&&i<=199)
-				{
-					myName(180,'a');myName(180,'b');myName(180,'h');myName(180,'a');myName(180,'y');//myName(180,'a');
-					_delay_us(1);
-					myName(180,'k');myName(180,'a');myName(180,'n');myName(180,'t');
-					//myName(180,'y');
-				}
-				if (i>=210&&i<=229)
-				{
-					myName4(210,'1');myName4(210,'2');myName4(210,'3');myName4(210,'4');myName4(210,'5');myName4(210,'6');myName4(210,'7');myName4(210,'8');myName4(210,'9');myName4(210,'0');
-					//myName(210,'a');myName(210,'b');myName(210,'h');myName(210,'a');
-					//myName4(210,'n');
-				}
-				if (i>=240&&i<=259)
-				{
-					myName(240,'a');
-					myName(240,'b');
-					myName(240,'h');
-					myName(240,'a');
-					myName(240,'y');
-				}
-				if (i>=270&&i<=289)
-				{
-					myName4(270,'1');myName4(270,'2');myName4(270,'3');myName4(270,'4');myName4(270,'5');myName4(270,'6');myName4(270,'7');myName4(270,'8');myName4(270,'9');myName4(270,'0');
-// 				 	myName(270,'a');
-// 				 	myName(270,'b');
-// 				 	myName(270,'h');
-// 				 	myName(270,'a');
-// 				 	myName(270,'y');
-				}
- 				 				if (i>=290&&i<=309){}
-// 				 				{
-// 									 WHITE;_delay_us(50);}
-				 				//	myName(270,'a');
-				// 					myName(270,'b');
-				// 					myName(270,'h');
-				// 					myName(270,'a');
-				// 					myName(270,'y');
-				// 				}
-				// 			else if (i>=280 && i<=300)
-				// 			{
-				// 				//myName(20);
-				// 				for (j=0;j<25;j++)
-				// 				{
-				// 					for (k=j;k<2;k++)
-				// 					{
-				// 						WHITE;
-				// 						_delay_us(1);
-				// 					}
-				//
-				// 				}
-				// 			}
-				
-				BLACK;_delay_us(2);
-			}
-		}
-		if(alpha == 6){
-			
-			if(i>=6 && i <=308)
-			{
-				ZERO;myDelay(0xF9);BLACK;_delay_us(8);
-				BLACK;
-			//	_delay_us(5);
-				//WHITE;
-				_delay_us(1);
-				if (i<190)
-				{
-					for (j=0;j<20;j++)
-					{
-						for (k=j;k<2;k++)
-						{
-							BLACK;WHITE;
-							SPDR = 0xff;
-							_delay_us(1);
-						}
-						
-					}
-				}
-				else if (i>200)
-				{
-					for (j=0;j<30;j++)
-					{
-						for (k=j;k<2;k++)
-						{
-							_delay_us(1);
-						}
-						
-					}
-				}
-				
-				BLACK;_delay_us(2);
-			}
-			
-
-		}
-}
+#include "frames.h"
 
 
 void myName(int num,char chrAlp){
@@ -753,22 +207,34 @@ void myName(int num,char chrAlp){
 		
 	break;
 	case 'b':
-	
 	SPDR = (arrb[i-num]);//_delay_us(1);
-	//for( int o1=0;o1<3;o1++)PORTD = 0xa0&(arrb[i-num]>>o1);
-	//BLACK;
-	//ZERO;//BLACK;
+	break;
+		case 'e':
+		SPDR = (arre[i-num]);
+		break;
+	case 'f':
+	SPDR = (arrf[i-num]);
 	break;
 	case 'h':
-	SPDR = arrh[i-num];//_delay_us(1);
-	//for(int o1=0;o1<3;o1++)PORTD = /*0xff&*/(arrh[i-num]>>o1);
-	//BLACK;
+	SPDR = arrh[i-num];
+	break;
+	case 'i':
+	SPDR = arri[i-num];//_delay_us(1);
 	break;
 	case 'k':
 	SPDR = arrk[i-num];//_delay_us(1);
 	break;
+	case 'm':
+	SPDR = arrm[i-num];//_delay_us(1);
+	break;
 	case 'n':
 	SPDR = arrn[i-num];//_delay_us(1);
+	break;
+	case 'r':
+	SPDR = arrr[i-num];//_delay_us(1);
+	break;
+	case 's':
+	SPDR = arrs[i-num];
 	break;
 	case 't':
 	SPDR = arrt[i-num];//_delay_us(1);

@@ -1,9 +1,11 @@
 This document contains codes for generating simple VGA signal.\
 VGA mode : 1024 x 768 at 60Hz
 
+
+
 Hardware setup
 
-|BOARD                 |VGA||
+|BOARD : Stm32l476vg-DISCO                |VGA||
 | --- | --- | --- |
 |GND               |      |     Pin 5|
 |PB2 (LED Red)     |Hsync|      Pin 13|

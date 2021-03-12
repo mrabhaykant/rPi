@@ -1,0 +1,9 @@
+# depslib dependency file v1.0
+1615569503 source:/home/pi/Documents/CBproject/basic tcp/main.c
+	<stdio.h>
+	<string.h>
+	<sys/socket.h>
+	<arpa/inet.h>
+	<fcntl.h>
+	<unistd.h>
+

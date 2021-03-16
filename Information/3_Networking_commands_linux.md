@@ -8,3 +8,6 @@ These are some of the networking commands for the linux.
 2. netstat
    - usually comes pre installed in most of the standard debian based distributions.
    - basic usage ```netstat -an```
+
+3. ifconfig
+   - Lets you see the network configuration

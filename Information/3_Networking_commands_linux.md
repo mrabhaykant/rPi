@@ -11,3 +11,9 @@ These are some of the networking commands for the linux.
 
 3. ifconfig
    - Lets you see the network configuration
+
+4. iptables-legacy
+   - For IP packet routing TCP/UDP packet
+   - PREROUTING syntax ```-A PREROUTING -i wlan0 -p udp -m udp --dport 1234 -j DNAT --to-destination 192.168.43.202:57400```
+   - FORWARD syntax ```-A FORWARD -d 192.168.43.72/32 -i wlan0 -p udp -m udp --dport 1234 -c 0 0 -j ACCEPT```
+   - NOTE: Iptables are being replaced by nftables. Translate legacy commands into new nftables.
